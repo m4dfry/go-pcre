@@ -263,3 +263,17 @@ func TestReplaceAll(t *testing.T) {
 		t.Error("ReplaceAll2", result)
 	}
 }
+
+func TestReplaceAllImproved(t *testing.T) {
+	re := MustCompile("f(o)(o)d", 0)
+	// Don't change at ends.
+	result := re.ReplaceAllImproved([]byte("I like foods."), []byte(`d\$1ar`), 0)
+	if string(result) != "I like doars." {
+		t.Error("ReplaceAll", result)
+	}
+	// Change at ends.
+	result = re.ReplaceAllImproved([]byte("food fight fools food"), []byte(`c\$1r\$2`), 0)
+	if string(result) != "coro fight fools coro" {
+		t.Error("ReplaceAll2", result)
+	}
+}

@@ -60,6 +60,7 @@ package pcre
 import "C"
 
 import (
+	bytesutil "bytes"
 	"fmt"
 	"strconv"
 	"unsafe"
@@ -608,9 +609,39 @@ func (re Regexp) ReplaceAll(bytes, repl []byte, flags int) []byte {
 	return append(r, bytes...)
 }
 
+// ReplaceAllImproved returns a copy of a byte slice
+// where all pattern matches are replaced by repl but using group logic
+func (re Regexp) ReplaceAllImproved(bytes, repl []byte, flags int) []byte {
+	m := re.Matcher(bytes, flags)
+	r := []byte{}
+	delim := []byte(`\$`)
+	lend := len(delim)
+
+	for m.matches {
+		for bytesutil.Contains(repl, delim) {
+			rep := []byte{}
+			i := bytesutil.Index(repl, delim)
+			a, err := strconv.Atoi(string((repl[i+lend])))
+			if err == nil && a <= m.Groups() {
+				rep = []byte(m.GroupString(a))
+			}
+			repl = bytesutil.Replace(repl, repl[i:i+lend+1], rep, 1)
+		}
+		r = append(append(r, bytes[:m.ovector[0]]...), repl...)
+		bytes = bytes[m.ovector[1]:]
+		m.Match(bytes, flags)
+	}
+	return append(r, bytes...)
+}
+
 // ReplaceAllString is equivalent to ReplaceAll with string return type.
 func (re Regexp) ReplaceAllString(in, repl string, flags int) string {
 	return string(re.ReplaceAll([]byte(in), []byte(repl), flags))
+}
+
+// ReplaceAllStringImproved is equivalent to ReplaceAll with string return type.
+func (re Regexp) ReplaceAllStringImproved(in, repl string, flags int) string {
+	return string(re.ReplaceAllImproved([]byte(in), []byte(repl), flags))
 }
 
 // CompileError holds details about a compilation error,
